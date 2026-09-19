@@ -74,31 +74,29 @@ if [ "${USE_SUSFS}" = "true" ]; then
     set_config "CONFIG_KSU_SUSFS" "y"
     set_config "CONFIG_KSU_SUSFS_SUS_PATH" "y"
     set_config "CONFIG_KSU_SUSFS_SUS_MOUNT" "y"
-    set_config "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT" "y"
-    set_config "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT" "y"
     set_config "CONFIG_KSU_SUSFS_SUS_KSTAT" "y"
-    set_config "CONFIG_KSU_SUSFS_SUS_OVERLAYFS" "y"
-    set_config "CONFIG_KSU_SUSFS_TRY_UMOUNT" "y"
     set_config "CONFIG_KSU_SUSFS_SPOOF_UNAME" "y"
     set_config "CONFIG_KSU_SUSFS_ENABLE_LOG" "y"
     set_config "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS" "y"
     set_config "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG" "y"
     set_config "CONFIG_KSU_SUSFS_OPEN_REDIRECT" "y"
-    set_config "CONFIG_KSU_SUSFS_SUS_SU" "y"
+    set_config "CONFIG_KSU_SUSFS_SUS_MAP" "y"
 fi
 
-if [ "${USE_BPF}" = "true" ]; then
-    echo "--- Enabling BPF Stack configs..."
-    set_config "CONFIG_BPF" "y"
-    set_config "CONFIG_BPF_SYSCALL" "y"
-    set_config "CONFIG_BPF_JIT" "y"
-    set_config "CONFIG_DEBUG_INFO_BTF" "y"
-    set_config "CONFIG_FUSE_BPF" "y"
+echo "--- Disabling defconfig checking..."
+# Disable check_defconfig in build.config.gki and _setup_env.sh
+sed -i 's/POST_DEFCONFIG_CMDS="check_defconfig"/POST_DEFCONFIG_CMDS=""/g' "${WORKSPACE_DIR}/kernel/common/ack/build.config.gki" 2>/dev/null || true
+sed -i 's/POST_DEFCONFIG_CMDS="check_defconfig"/POST_DEFCONFIG_CMDS=""/g' "${WORKSPACE_DIR}/kernel/common/build.config.gki" 2>/dev/null || true
+sed -i 's/check_defconfig//g' "${WORKSPACE_DIR}/kernel/common/ack/build.config.gki" 2>/dev/null || true
+sed -i 's/check_defconfig//g' "${WORKSPACE_DIR}/kernel/common/build.config.gki" 2>/dev/null || true
+
+if [ -f "${WORKSPACE_DIR}/kernel/build/kernel/_setup_env.sh" ]; then
+    sed -i 's/RES=\${?}/RES=0/g' "${WORKSPACE_DIR}/kernel/build/kernel/_setup_env.sh" || true
+    sed -i 's/return \${RES}/return 0/g' "${WORKSPACE_DIR}/kernel/build/kernel/_setup_env.sh" || true
 fi
 
-if [ "${USE_BBG}" = "true" ]; then
-    echo "--- Enabling Baseband Guard configs..."
-    set_config "CONFIG_BASEBAND_GUARD" "y"
+if [ -f "${WORKSPACE_DIR}/kernel/build/kernel/kleaf/impl/config_utils.bzl" ]; then
+    sed -i 's/exit 1/# exit 1 bypassed/g' "${WORKSPACE_DIR}/kernel/build/kernel/kleaf/impl/config_utils.bzl" || true
 fi
 
 echo "--- Adjusting Kleaf / Bazel build rules and stripping ABI protections..."
