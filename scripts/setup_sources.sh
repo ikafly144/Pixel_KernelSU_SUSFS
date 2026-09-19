@@ -15,11 +15,19 @@ cd "${WORKSPACE_DIR}"
 
 if [ "${KERNEL_VER}" = "6.6" ]; then
     GITLAB_REPO="https://gitlab.com/grapheneos/kernel_pixel_6.6.git"
-    GIT_REF="${BUILD_TAG:-2026090500}" # Target: CP3A.260905.009 (2026-09-05)
+    GIT_REF="2026090500" # Target: CP3A.260905.009 (2026-09-05)
+    if [ -n "${BUILD_TAG}" ] && [ "${BUILD_TAG}" != "All" ]; then
+        CLEANED_TAG=$(echo "${BUILD_TAG}" | tr -d '-')
+        if [ ${#CLEANED_TAG} -eq 8 ]; then
+            GIT_REF="${CLEANED_TAG}00"
+        elif [ ${#CLEANED_TAG} -eq 10 ]; then
+            GIT_REF="${CLEANED_TAG}"
+        fi
+    fi
     SUSFS_BRANCH="gki-android15-6.6"
 elif [ "${KERNEL_VER}" = "6.12" ]; then
     GITLAB_REPO="https://gitlab.com/grapheneos/kernel_pixel_6.12.git"
-    GIT_REF="${BUILD_TAG:-17-qpr2-base}" # Target: Android 17 QPR2 preview
+    GIT_REF="17-qpr2-base" # Target: Android 17 QPR2 preview
     SUSFS_BRANCH="gki-android16-6.12"
 else
     echo "ERROR: Unsupported kernel version: ${KERNEL_VER}" >&2
