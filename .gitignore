@@ -1,0 +1,13 @@
+# Build and cache artifacts
+out/
+kernel/
+AnyKernel3/
+susfs4ksu/
+KernelSU-Next/
+*.zip
+*.tar*
+*.log
+.bazel*
+bazel-*
+__pycache__/
+*.pyc
