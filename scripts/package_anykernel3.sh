@@ -3,8 +3,11 @@
 set -euo pipefail
 
 KERNEL_VER="${1:-6.6}"
-INCLUDE_MODULES="${2:-true}"
-DEVICE_CHECK="${3:-true}"
+SUBLEVEL="${2:-127}"
+BUILD_ID="${3:-CP3A.260905.009}"
+ROOT_FLAVOR="${4:-KernelSU-Next}"
+INCLUDE_MODULES="${5:-true}"
+DEVICE_CHECK="${6:-true}"
 
 echo "===> Packaging AnyKernel3.zip for Pixel 10 (muzel)..."
 
@@ -104,8 +107,7 @@ EOF
 
 chmod +x anykernel.sh
 
-DATE_TAG=$(date -u +%Y%m%d_%H%M%S)
-ZIP_NAME="AnyKernel3-Pixel10-muzel-v${KERNEL_VER}-${DATE_TAG}.zip"
+ZIP_NAME="AnyKernel3-Pixel10-muzel-${KERNEL_VER}.${SUBLEVEL}-${BUILD_ID}-${ROOT_FLAVOR}.zip"
 
 echo "--- Creating AnyKernel3 zip: ${ZIP_NAME}..."
 zip -r9 "${WORKSPACE_DIR}/${ZIP_NAME}" * -x "*.git*" "README.md" "*.zip"

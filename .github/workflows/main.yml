@@ -24,18 +24,13 @@ on:
         type: boolean
         default: false
       kernel_build_version:
-        description: "Kernel Version"
+        description: "Pixel 10 (muzel) Kernel Version"
         type: choice
         options:
-          - All
-          - 5.10.x-android12
-          - 5.10.x-android13
-          - 5.15.x-android13
-          - 5.15.x-android14
-          - 6.1.x-android14
-          - 6.6.x-android15
-          - 6.12.x-android16
-        default: All
+          - "6.6 (CP3A.260905.009 / 2026-09-05)"
+          - "6.12 (Android 17 QPR2 preview)"
+          - "All"
+        default: "6.6 (CP3A.260905.009 / 2026-09-05)"
       os_patch_level:
         description: "Patch date (YYYY-MM), kernel sublevel, lts, or All (no filter)"
         required: true
@@ -61,11 +56,8 @@ on:
           - KernelSU-Next
           - KernelSU
           - ReSukiSU
-          - SukiSU-Ultra
-          - KowSU
-          - No Root
           - All
-        default: All
+        default: KernelSU-Next
       use_susfs:
         description: "SUSFS"
         type: boolean
@@ -720,7 +712,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.10.x-android12')"
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -749,7 +741,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.10.x-android13')"
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -778,7 +770,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.15.x-android13')"
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -807,7 +799,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.15.x-android14')"
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -836,7 +828,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.1.x-android14')"
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -865,7 +857,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.6.x-android15')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || contains(inputs.kernel_build_version, '6.6'))"
     strategy:
       fail-fast: false
       matrix:
@@ -887,6 +879,7 @@ jobs:
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
+      release_type: ${{ inputs.release_type }}
     secrets: inherit
 
   build-android16-6-12:
@@ -894,7 +887,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.12.x-android16')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || contains(inputs.kernel_build_version, '6.12'))"
     strategy:
       fail-fast: false
       matrix:
@@ -916,6 +909,7 @@ jobs:
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
+      release_type: ${{ inputs.release_type }}
     secrets: inherit
 
   update-verified-pins:

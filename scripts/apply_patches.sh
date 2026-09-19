@@ -41,21 +41,36 @@ set_config() {
     done
 }
 
-echo "--- Integrating KernelSU-Next..."
+ROOT_FLAVOR="${6:-next}"
+
+echo "--- Integrating root implementation (${ROOT_FLAVOR})..."
+ROOT_SRC_DIR="${WORKSPACE_DIR}/root_src"
+if [ ! -d "${ROOT_SRC_DIR}" ] && [ -d "${WORKSPACE_DIR}/KernelSU-Next" ]; then
+    ROOT_SRC_DIR="${WORKSPACE_DIR}/KernelSU-Next"
+fi
+
 mkdir -p "${ACK_DIR}/drivers"
 rm -rf "${ACK_DIR}/drivers/kernelsu"
-cp -r "${WORKSPACE_DIR}/KernelSU-Next/kernel" "${ACK_DIR}/drivers/kernelsu"
+cp -r "${ROOT_SRC_DIR}/kernel" "${ACK_DIR}/drivers/kernelsu"
 
 # Replace relative symlink include/uapi -> ../../uapi with the actual uapi directory
-rm -rf "${ACK_DIR}/drivers/kernelsu/include/uapi"
-cp -r "${WORKSPACE_DIR}/KernelSU-Next/uapi" "${ACK_DIR}/drivers/kernelsu/include/uapi"
-# Also place uapi directly in drivers/kernelsu/uapi as fallback
-rm -rf "${ACK_DIR}/drivers/kernelsu/uapi"
-cp -r "${WORKSPACE_DIR}/KernelSU-Next/uapi" "${ACK_DIR}/drivers/kernelsu/uapi"
+if [ -d "${ROOT_SRC_DIR}/uapi" ]; then
+    rm -rf "${ACK_DIR}/drivers/kernelsu/include/uapi"
+    cp -r "${ROOT_SRC_DIR}/uapi" "${ACK_DIR}/drivers/kernelsu/include/uapi"
+    rm -rf "${ACK_DIR}/drivers/kernelsu/uapi"
+    cp -r "${ROOT_SRC_DIR}/uapi" "${ACK_DIR}/drivers/kernelsu/uapi"
+fi
 
 # Copy git repository info so Kbuild can compute KSU_GIT_VERSION
-if [ -d "${WORKSPACE_DIR}/KernelSU-Next/.git" ]; then
-    cp -r "${WORKSPACE_DIR}/KernelSU-Next/.git" "${ACK_DIR}/drivers/kernelsu/.git"
+if [ -d "${ROOT_SRC_DIR}/.git" ]; then
+    cp -r "${ROOT_SRC_DIR}/.git" "${ACK_DIR}/drivers/kernelsu/.git"
+fi
+
+if [ "${ROOT_FLAVOR}" = "kernelsu" ] && [ -f "${WORKSPACE_DIR}/susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" ]; then
+    echo "--- Applying 10_enable_susfs_for_ksu.patch to KernelSU..."
+    cd "${ACK_DIR}/drivers/kernelsu"
+    patch -p1 --batch -N < "${WORKSPACE_DIR}/susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+    cd "${WORKSPACE_DIR}"
 fi
 
 if ! grep -q 'obj-$(CONFIG_KSU) += kernelsu/' "${ACK_DIR}/drivers/Makefile"; then

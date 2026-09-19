@@ -76,6 +76,11 @@ on:
         required: false
         type: string
         default: ""
+      release_type:
+        description: "Release Type"
+        required: false
+        type: string
+        default: "Action"
 
 jobs:
   generate-matrix:
@@ -183,4 +188,5 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
+      release_type: ${{ inputs.release_type }}
     secrets: inherit
