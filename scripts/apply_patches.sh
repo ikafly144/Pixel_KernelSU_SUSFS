@@ -46,6 +46,18 @@ mkdir -p "${ACK_DIR}/drivers"
 rm -rf "${ACK_DIR}/drivers/kernelsu"
 cp -r "${WORKSPACE_DIR}/KernelSU-Next/kernel" "${ACK_DIR}/drivers/kernelsu"
 
+# Replace relative symlink include/uapi -> ../../uapi with the actual uapi directory
+rm -rf "${ACK_DIR}/drivers/kernelsu/include/uapi"
+cp -r "${WORKSPACE_DIR}/KernelSU-Next/uapi" "${ACK_DIR}/drivers/kernelsu/include/uapi"
+# Also place uapi directly in drivers/kernelsu/uapi as fallback
+rm -rf "${ACK_DIR}/drivers/kernelsu/uapi"
+cp -r "${WORKSPACE_DIR}/KernelSU-Next/uapi" "${ACK_DIR}/drivers/kernelsu/uapi"
+
+# Copy git repository info so Kbuild can compute KSU_GIT_VERSION
+if [ -d "${WORKSPACE_DIR}/KernelSU-Next/.git" ]; then
+    cp -r "${WORKSPACE_DIR}/KernelSU-Next/.git" "${ACK_DIR}/drivers/kernelsu/.git"
+fi
+
 if ! grep -q 'obj-$(CONFIG_KSU) += kernelsu/' "${ACK_DIR}/drivers/Makefile"; then
     echo 'obj-$(CONFIG_KSU) += kernelsu/' >> "${ACK_DIR}/drivers/Makefile"
 fi
