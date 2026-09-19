@@ -92,6 +92,11 @@ fi
 echo "--- Cloning AnyKernel3..."
 if [ ! -d "AnyKernel3" ]; then
     git clone --depth 1 https://github.com/osm0sis/AnyKernel3.git AnyKernel3
+    echo "--- Fetching 64-bit arm64 tools for AnyKernel3 (Pixel 10 pure 64-bit)..."
+    git clone --depth 1 --branch arm64-tools https://github.com/osm0sis/AnyKernel3.git AnyKernel3_arm64
+    cp -f AnyKernel3_arm64/* AnyKernel3/tools/
+    chmod +x AnyKernel3/tools/*
+    rm -rf AnyKernel3_arm64
 else
     echo "AnyKernel3 directory already exists, skipping clone."
 fi

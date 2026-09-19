@@ -27,6 +27,60 @@ fi
 
 cd "${AK3_DIR}"
 
+# Ensure AnyKernel3 tools are 64-bit arm64 for Pixel 10 (Tensor G5 pure 64-bit)
+if [ -f "tools/busybox" ] && file "tools/busybox" | grep -q "32-bit"; then
+    echo "--- Detected 32-bit tools in AnyKernel3; updating to arm64 binaries..."
+    git clone --depth 1 --branch arm64-tools https://github.com/osm0sis/AnyKernel3.git "${WORKSPACE_DIR}/arm64_tools_tmp"
+    cp -f "${WORKSPACE_DIR}/arm64_tools_tmp"/* tools/
+    chmod +x tools/*
+    rm -rf "${WORKSPACE_DIR}/arm64_tools_tmp"
+fi
+
+# Patch update-binary and ak3-core.sh for KernelSU-Next / spoofed packages / vendor_dlkm support
+if [ -f "META-INF/com/google/android/update-binary" ]; then
+    echo "--- Patching update-binary for KernelSU-Next and vendor_dlkm support..."
+    python3 -c '
+with open("META-INF/com/google/android/update-binary", "r") as f:
+    content = f.read()
+
+target1 = "if [ -d /data/adb/magisk -a -f $AKHOME/magisk_patched ] || [ -d /data/data/me.weishu.kernelsu -a -f $AKHOME/kernelsu_patched ]; then"
+repl1 = "if [ -d /data/adb/magisk -a -f $AKHOME/magisk_patched ] || [ -f $AKHOME/kernelsu_patched ] || [ -d /data/adb/ksu ] || [ -f /data/adb/ksud ] || [ -d /data/adb/modules ] || [ -d /data/data/me.weishu.kernelsu -a -f $AKHOME/kernelsu_patched ]; then"
+
+target2 = "mv -f vendor system;"
+repl2 = "mv -f vendor system; mv -f vendor_dlkm system;"
+
+target3 = "cp -f /data/app/*/me.weishu.kernelsu*/lib/*/libksud.so /data/adb/ksud;"
+repl3 = "cp -f /data/app/*/*kernelsu*/lib/*/libksud.so /data/adb/ksud 2>/dev/null || cp -f /data/app/*/*ksunext*/lib/*/libksud.so /data/adb/ksud 2>/dev/null || cp -f /data/app/*/lib/*/libksud.so /data/adb/ksud 2>/dev/null || true;"
+
+if target1 in content:
+    content = content.replace(target1, repl1)
+if target2 in content:
+    content = content.replace(target2, repl2)
+if target3 in content:
+    content = content.replace(target3, repl3)
+
+with open("META-INF/com/google/android/update-binary", "w") as f:
+    f.write(content)
+'
+fi
+
+if [ -f "tools/ak3-core.sh" ]; then
+    echo "--- Patching ak3-core.sh for KernelSU-Next detection..."
+    python3 -c '
+with open("tools/ak3-core.sh", "r") as f:
+    content = f.read()
+
+target1 = "elif [ -d /data/data/me.weishu.kernelsu ]"
+repl1 = "elif [ -d /data/adb/ksu -o -f /data/adb/ksud -o -d /data/adb/modules -o -d /data/data/me.weishu.kernelsu -o -d /data/data/com.rifsxd.ksunext ]"
+
+if target1 in content:
+    content = content.replace(target1, repl1)
+
+with open("tools/ak3-core.sh", "w") as f:
+    f.write(content)
+'
+fi
+
 # Clean previous zip or old Image
 rm -f *.zip Image Image.lz4 dtb dtbo.img
 rm -rf modules/
@@ -51,10 +105,12 @@ DOMODULES_VAL=0
 if [ "${INCLUDE_MODULES}" = "true" ]; then
     DOMODULES_VAL=1
     echo "--- Copying vendor kernel modules (*.ko)..."
-    mkdir -p modules/vendor_dlkm
-    find "${DIST_DIR}" -type f -name "*.ko" -exec cp {} modules/vendor_dlkm/ \;
-    MODULE_COUNT=$(find modules/vendor_dlkm -name "*.ko" | wc -l)
-    echo "Copied ${MODULE_COUNT} vendor modules into AnyKernel3 (modules/vendor_dlkm)."
+    mkdir -p modules/vendor/lib/modules
+    mkdir -p modules/vendor_dlkm/lib/modules
+    find "${DIST_DIR}" -type f -name "*.ko" -exec cp {} modules/vendor/lib/modules/ \;
+    cp -r modules/vendor/lib/modules/* modules/vendor_dlkm/lib/modules/
+    MODULE_COUNT=$(find modules/vendor/lib/modules -name "*.ko" | wc -l)
+    echo "Copied ${MODULE_COUNT} vendor modules into AnyKernel3 (modules/vendor/lib/modules & modules/vendor_dlkm/lib/modules)."
 fi
 
 DEVICECHECK_VAL=0
