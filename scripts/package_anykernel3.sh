@@ -65,7 +65,7 @@ with open("META-INF/com/google/android/update-binary", "w") as f:
 fi
 
 if [ -f "tools/ak3-core.sh" ]; then
-    echo "--- Patching ak3-core.sh for KernelSU-Next detection and variable casing..."
+    echo "--- Patching ak3-core.sh for KernelSU-Next detection..."
     python3 -c '
 with open("tools/ak3-core.sh", "r") as f:
     content = f.read()
@@ -73,17 +73,8 @@ with open("tools/ak3-core.sh", "r") as f:
 target1 = "elif [ -d /data/data/me.weishu.kernelsu ]"
 repl1 = "elif [ -d /data/adb/ksu -o -f /data/adb/ksud -o -d /data/adb/modules -o -d /data/data/me.weishu.kernelsu -o -d /data/data/com.rifsxd.ksunext ]"
 
-target_setup = "setup_ak() {"
-repl_setup = """setup_ak() {
-  [ "$BLOCK" ] || BLOCK=$block;
-  [ "$IS_SLOT_DEVICE" ] || IS_SLOT_DEVICE=$is_slot_device;
-  [ "$RAMDISK_COMPRESSION" ] || RAMDISK_COMPRESSION=$ramdisk_compression;
-  [ "$PATCH_VBMETA_FLAG" ] || PATCH_VBMETA_FLAG=$patch_vbmeta_flag;"""
-
 if target1 in content:
     content = content.replace(target1, repl1)
-if target_setup in content:
-    content = content.replace(target_setup, repl_setup)
 
 with open("tools/ak3-core.sh", "w") as f:
     f.write(content)
@@ -159,12 +150,6 @@ BLOCK=boot;
 IS_SLOT_DEVICE=auto;
 RAMDISK_COMPRESSION=auto;
 PATCH_VBMETA_FLAG=auto;
-
-# legacy lowercase aliases
-block=boot;
-is_slot_device=auto;
-ramdisk_compression=auto;
-patch_vbmeta_flag=auto;
 
 # import functions/variables and setup patching - see for reference (DO NOT REMOVE)
 . tools/ak3-core.sh;
