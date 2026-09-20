@@ -43,6 +43,9 @@ if [ -f "META-INF/com/google/android/update-binary" ]; then
 with open("META-INF/com/google/android/update-binary", "r") as f:
     content = f.read()
 
+target0 = "if [ ! -d /data/adb -o ! -d /data/data/android ]; then"
+repl0 = "if [ ! -d /data/adb ]; then"
+
 target1 = "if [ -d /data/adb/magisk -a -f $AKHOME/magisk_patched ] || [ -d /data/data/me.weishu.kernelsu -a -f $AKHOME/kernelsu_patched ]; then"
 repl1 = "if [ -d /data/adb/magisk -a -f $AKHOME/magisk_patched ] || [ -f $AKHOME/kernelsu_patched ] || [ -d /data/adb/ksu ] || [ -f /data/adb/ksud ] || [ -d /data/adb/modules ] || [ -d /data/data/me.weishu.kernelsu -a -f $AKHOME/kernelsu_patched ]; then"
 
@@ -52,6 +55,8 @@ repl2 = "mv -f vendor system; mv -f vendor_dlkm system;"
 target3 = "cp -f /data/app/*/me.weishu.kernelsu*/lib/*/libksud.so /data/adb/ksud;"
 repl3 = "cp -f /data/app/*/*kernelsu*/lib/*/libksud.so /data/adb/ksud 2>/dev/null || cp -f /data/app/*/*ksunext*/lib/*/libksud.so /data/adb/ksud 2>/dev/null || cp -f /data/app/*/lib/*/libksud.so /data/adb/ksud 2>/dev/null || true;"
 
+if target0 in content:
+    content = content.replace(target0, repl0)
 if target1 in content:
     content = content.replace(target1, repl1)
 if target2 in content:
