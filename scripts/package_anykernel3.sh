@@ -155,9 +155,10 @@ PATCH_VBMETA_FLAG=auto;
 . tools/ak3-core.sh;
 
 # boot install
-dump_boot;
+split_boot;
 
-write_boot;
+flash_boot;
+flash_generic dtbo;
 ## end boot install
 EOF
 
