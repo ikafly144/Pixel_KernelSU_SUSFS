@@ -126,7 +126,9 @@ jobs:
                       kernel_version: $version_parts[1],
                       sublevel: $item.sublevel,
                       os_patch_level: $item.date,
-                      variant: (if $requested_variant == "" then "Normal" else $requested_variant end)
+                      variant: (if $requested_variant == "" then "Normal" else $requested_variant end),
+                      kernel_source: (if $cfg.source != null then ($cfg.source | tojson) else "" end),
+                      kernel_ref: ($item.ref // "")
                     }
                 ]
                 + (if $requested_variant == "" then [
@@ -138,7 +140,9 @@ jobs:
                         kernel_version: $version_parts[1],
                         sublevel: $item.sublevel,
                         os_patch_level: $item.date,
-                        variant: $item.variant
+                        variant: $item.variant,
+                        kernel_source: (if $cfg.source != null then ($cfg.source | tojson) else "" end),
+                        kernel_ref: ($item.ref // "")
                       }
                   ] else [] end)
                 | unique_by([.android_version, .kernel_version, .sublevel, .os_patch_level, .variant])
@@ -188,6 +192,8 @@ jobs:
       sublevel: ${{ matrix.sublevel }}
       os_patch_level: ${{ matrix.os_patch_level }}
       variant: ${{ matrix.variant }}
+      kernel_source: ${{ matrix.kernel_source }}
+      kernel_ref: ${{ matrix.kernel_ref }}
       feature_set: ${{ inputs.feature_set }}
       ksu_branch: ${{ inputs.ksu_branch }}
       susfs_commit: ${{ inputs.susfs_commit }}

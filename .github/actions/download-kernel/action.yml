@@ -14,6 +14,18 @@ inputs:
   os_patch_level:
     description: 'OS patch level (e.g., 2024-01)'
     required: true
+  sublevel:
+    description: 'Kernel sublevel (e.g. 138)'
+    required: false
+    default: ''
+  kernel_source:
+    description: 'Custom kernel source configuration JSON'
+    required: false
+    default: ''
+  kernel_ref:
+    description: 'Git ref/branch/tag for custom kernel source'
+    required: false
+    default: ''
 
 outputs:
   deprecated_branch:
@@ -32,6 +44,92 @@ runs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -euo pipefail
+
+        clean_workspace() {
+          echo "Disk before cleanup:"
+          df -h "$PWD" | tail -n +2 || true
+          # Remove repo metadata AND any half-checked-out project dirs from the
+          # previous attempt. Deleting only .repo leaves stale checkouts behind
+          # and every later sync fails with "Checking out local projects failed".
+          find "$PWD" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          echo "Disk after cleanup:"
+          df -h "$PWD" | tail -n +2 || true
+        }
+
+        KERNEL_SOURCE_JSON='${{ inputs.kernel_source }}'
+        if [ -n "$KERNEL_SOURCE_JSON" ] && [ "$KERNEL_SOURCE_JSON" != "null" ] && [ "$KERNEL_SOURCE_JSON" != '""' ]; then
+          SOURCE_URL=$(echo "$KERNEL_SOURCE_JSON" | jq -r '.url // empty')
+          KERNEL_REF="${{ inputs.kernel_ref }}"
+          if [ -z "$KERNEL_REF" ]; then
+            KERNEL_REF=$(echo "$KERNEL_SOURCE_JSON" | jq -r '.ref // "master"')
+          fi
+
+          echo "Custom kernel source configured:"
+          echo "  URL: $SOURCE_URL"
+          echo "  Ref: $KERNEL_REF"
+
+          MAX_RETRIES=3
+          RETRY_DELAY_SHORT=15
+          attempt=1
+          clone_success=false
+
+          while [ $attempt -le $MAX_RETRIES ]; do
+            echo "Attempt $attempt/$MAX_RETRIES: cloning custom kernel repository..."
+            clean_workspace || true
+            if git clone --depth=1 --branch "$KERNEL_REF" "$SOURCE_URL" .; then
+              clone_success=true
+              break
+            else
+              echo "Branch clone failed; attempting fetch by ref..."
+              git init
+              git remote add origin "$SOURCE_URL"
+              if git fetch --depth=1 origin "$KERNEL_REF" && git checkout FETCH_HEAD; then
+                clone_success=true
+                break
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "Clone failed; retrying in ${RETRY_DELAY_SHORT}s..."
+              sleep $RETRY_DELAY_SHORT
+            fi
+            attempt=$((attempt+1))
+          done
+
+          if [ "$clone_success" != "true" ]; then
+            echo "ERROR: Failed to clone custom kernel source after $MAX_RETRIES attempts." >&2
+            exit 1
+          fi
+
+          echo "Reshaping custom repository structure for standard ACK layout..."
+          if [ -d "common/ack" ]; then
+            mv common/ack common_ack_temp
+            rm -rf common
+            mv common_ack_temp common
+          fi
+
+          rm -rf private aosp aosp-staging build_*.sh
+
+          mkdir -p tools
+          ln -sf ../build/kernel/kleaf/bazel.sh tools/bazel
+          if [ -f "build/kernel/kleaf/bzlmod/bazel.MODULE.bazel" ]; then
+            ln -sf build/kernel/kleaf/bzlmod/bazel.MODULE.bazel MODULE.bazel
+          fi
+
+          EXPECTED_SUBLEVEL="${{ inputs.sublevel }}"
+          if [ -n "$EXPECTED_SUBLEVEL" ] && [ "$EXPECTED_SUBLEVEL" != "X" ] && [ -f "common/Makefile" ]; then
+            ACTUAL_SUBLEVEL=$(grep -E '^[[:space:]]*SUBLEVEL[[:space:]]*=' common/Makefile | head -n 1 | awk -F'=' '{print $2}' | tr -d ' ')
+            echo "Expected sublevel: $EXPECTED_SUBLEVEL, detected sublevel: $ACTUAL_SUBLEVEL"
+            if [ "$ACTUAL_SUBLEVEL" != "$EXPECTED_SUBLEVEL" ]; then
+              echo "ERROR: Sublevel mismatch! Expected $EXPECTED_SUBLEVEL but found $ACTUAL_SUBLEVEL in common/Makefile" >&2
+              exit 1
+            fi
+          fi
+
+          echo "deprecated=false" >> "$GITHUB_OUTPUT"
+          echo "tag_fallback=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
 
         # Derive android and kernel from combined version when available
         VERSION="${{ inputs.version }}"
@@ -82,17 +180,6 @@ runs:
         # Always shallow: the build only needs the branch tip. Deeper retries
         # just download more data into a strained runner (slower + more disk).
         DEPTHS=(1 1 1)
-
-        clean_workspace() {
-          echo "Disk before cleanup:"
-          df -h "$PWD" | tail -n +2 || true
-          # Remove repo metadata AND any half-checked-out project dirs from the
-          # previous attempt. Deleting only .repo leaves stale checkouts behind
-          # and every later sync fails with "Checking out local projects failed".
-          find "$PWD" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-          echo "Disk after cleanup:"
-          df -h "$PWD" | tail -n +2 || true
-        }
 
         while [ $attempt -le $MAX_RETRIES ]; do
           CURRENT_DEPTH="${DEPTHS[$((attempt-1))]}"
@@ -180,7 +267,7 @@ runs:
 
         cd common
 
-        if [[ ! -d .git ]]; then
+        if [[ ! -d .git ]] && ! git rev-parse --git-dir >/dev/null 2>&1; then
           echo "WARNING: common is not a git checkout; skipping commit metadata capture."
           exit 0
         fi
