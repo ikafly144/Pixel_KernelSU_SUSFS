@@ -44,6 +44,7 @@ on:
           - 5.15.x-android14
           - 6.1.x-android14
           - 6.6.x-android15
+          - 6.6.x-android15-pixel
           - 6.12.x-android16
         default: All
       os_patch_level:
@@ -192,10 +193,10 @@ jobs:
           # Only these GKI families use a Kleaf build branch exposing
           # --page_size (main-kernel-build-2023/2024, main-kernel-2025).
           case "$KVER" in
-            6.1.x-android14|6.6.x-android15|6.12.x-android16) ;;
+            6.1.x-android14|6.6.x-android15|6.6.x-android15-pixel|6.12.x-android16) ;;
             *)
               echo "ERROR: page_size=16k requires kernel_build_version to be one of:" >&2
-              echo "  6.1.x-android14, 6.6.x-android15, 6.12.x-android16" >&2
+              echo "  6.1.x-android14, 6.6.x-android15, 6.6.x-android15-pixel, 6.12.x-android16" >&2
               echo "Got: '${KVER}'." >&2
               exit 1
               ;;
@@ -1018,6 +1019,37 @@ jobs:
       page_size: ${{ inputs.page_size || '4k' }}
     secrets: inherit
 
+  build-android15-6-6-pixel:
+    needs:
+    - resolve-sources
+    - build-nomount-module
+    if: "(github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && !inputs.test_release_notes && ((github.event_name == 'schedule' && inputs.kernel_build_version == '') || inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.6.x-android15-pixel')"
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
+    uses: ./.github/workflows/prepare.yml
+    with:
+      config_file: .github/config/android15-6.6-pixel.json
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'bakasu' && needs.resolve-sources.outputs.susfs_commit_android15_6_6_bakasu || (matrix.root.root_flavor == 'sukisu-ultra' && needs.resolve-sources.outputs.susfs_commit_android15_6_6_sukisu_ultra || needs.resolve-sources.outputs.susfs_commit_android15_6_6) }}
+      nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      produce_stock_configs: ${{ matrix.root.produce }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
+      ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name || 'Wild' }}
+      keep_kmi: ${{ inputs.keep_kmi || false }}
+      os_patch_level: ${{ inputs.os_patch_level || 'All' }}
+      allow_version_mismatch: ${{ inputs.allow_version_mismatch || false }}
+      use_cache: ${{ inputs.use_cache || (github.event_name == 'schedule' && true) || false }}
+      page_size: ${{ inputs.page_size || '4k' }}
+    secrets: inherit
+
   build-android16-6-12:
     needs:
     - resolve-sources
@@ -1065,6 +1097,7 @@ jobs:
     - build-android14-5-15
     - build-android14-6-1
     - build-android15-6-6
+    - build-android15-6-6-pixel
     - build-android16-6-12
     runs-on: ubuntu-latest
     env:
@@ -1146,10 +1179,11 @@ jobs:
           FR_4: ${{ needs.build-android14-5-15.result }}
           FR_5: ${{ needs.build-android14-6-1.result }}
           FR_6: ${{ needs.build-android15-6-6.result }}
+          FR_6_PIXEL: ${{ needs.build-android15-6-6-pixel.result }}
           FR_7: ${{ needs.build-android16-6-12.result }}
         run: |
           set -uo pipefail
-          results="build-android12-5-10=$FR_1,build-android13-5-10=$FR_2,build-android13-5-15=$FR_3,build-android14-5-15=$FR_4,build-android14-6-1=$FR_5,build-android15-6-6=$FR_6,build-android16-6-12=$FR_7"
+          results="build-android12-5-10=$FR_1,build-android13-5-10=$FR_2,build-android13-5-15=$FR_3,build-android14-5-15=$FR_4,build-android14-6-1=$FR_5,build-android15-6-6=$FR_6,build-android15-6-6-pixel=$FR_6_PIXEL,build-android16-6-12=$FR_7"
           if python3 .github/scripts/assemble_digest_input.py \
               --buildinfo-dir /tmp/buildinfo \
               --family-results "$results" \
@@ -1394,6 +1428,7 @@ jobs:
     - build-android14-5-15
     - build-android14-6-1
     - build-android15-6-6
+    - build-android15-6-6-pixel
     - build-android16-6-12
     steps:
     - uses: actions/checkout@v7
@@ -1446,6 +1481,7 @@ jobs:
     - build-android14-5-15
     - build-android14-6-1
     - build-android15-6-6
+    - build-android15-6-6-pixel
     - build-android16-6-12
 
     steps:
@@ -1544,6 +1580,7 @@ jobs:
     - build-android14-5-15
     - build-android14-6-1
     - build-android15-6-6
+    - build-android15-6-6-pixel
     - build-android16-6-12
     - build-nomount-module
     - publish-manager-artifacts
@@ -1580,6 +1617,7 @@ jobs:
         check_selected "5.15.x-android14" "build-android14-5-15" "${{ needs.build-android14-5-15.result }}"
         check_selected "6.1.x-android14" "build-android14-6-1" "${{ needs.build-android14-6-1.result }}"
         check_selected "6.6.x-android15" "build-android15-6-6" "${{ needs.build-android15-6-6.result }}"
+        check_selected "6.6.x-android15-pixel" "build-android15-6-6-pixel" "${{ needs.build-android15-6-6-pixel.result }}"
         check_selected "6.12.x-android16" "build-android16-6-12" "${{ needs.build-android16-6-12.result }}"
 
         if [[ "$failed" -ne 0 ]]; then
@@ -1977,7 +2015,7 @@ jobs:
 
   notes-preview:
     if: always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && vars.ENABLE_SCHEDULED_BUILDS == 'true'))
-    needs: [resolve-sources, build-android12-5-10, build-android13-5-10, build-android13-5-15, build-android14-5-15, build-android14-6-1, build-android15-6-6, build-android16-6-12]
+    needs: [resolve-sources, build-android12-5-10, build-android13-5-10, build-android13-5-15, build-android14-5-15, build-android14-6-1, build-android15-6-6, build-android15-6-6-pixel, build-android16-6-12]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -2111,6 +2149,8 @@ jobs:
           lines.append("")
           all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
           def kbv_to_variant(kbv):
+              if "-pixel" in kbv:
+                  kbv = kbv.replace("-pixel", "")
               if ".x-android" in kbv:
                   kv, av = kbv.split(".x-android", 1)
                   v = f"android{av}-{kv}"

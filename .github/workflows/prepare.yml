@@ -132,7 +132,9 @@ jobs:
                       kernel_version: $version_parts[1],
                       sublevel: $item.sublevel,
                       os_patch_level: $item.date,
-                      variant: (if $requested_variant == "" then "Normal" else $requested_variant end)
+                      variant: (if $requested_variant == "" then "Normal" else $requested_variant end),
+                      kernel_source: (if $cfg.source != null then ($cfg.source | tojson) else "" end),
+                      kernel_ref: ($item.ref // "")
                     }
                 ]
                 + (if $requested_variant == "" then [
@@ -144,7 +146,9 @@ jobs:
                         kernel_version: $version_parts[1],
                         sublevel: $item.sublevel,
                         os_patch_level: $item.date,
-                        variant: $item.variant
+                        variant: $item.variant,
+                        kernel_source: (if $cfg.source != null then ($cfg.source | tojson) else "" end),
+                        kernel_ref: ($item.ref // "")
                       }
                   ] else [] end)
                 | unique_by([.android_version, .kernel_version, .sublevel, .os_patch_level, .variant])
@@ -173,7 +177,7 @@ jobs:
           fi
 
           echo "matrix=$FINAL" >> "$GITHUB_OUTPUT"
-          echo "version_slug=$(jq -r '.include[0].version' <<< "$FINAL" | tr '._' '-')" >> "$GITHUB_OUTPUT"
+          echo "version_slug=$(basename "${{ inputs.config_file }}" .json | tr '._' '-')" >> "$GITHUB_OUTPUT"
 
   stock-configs:
     # Produces the stock GKI configs ONCE per family. main.yml sets
@@ -195,7 +199,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION_SLUG="$(jq -r '.include[0].version' <<< '${{ needs.generate-matrix.outputs.matrix }}' | tr '._' '-')"
+          VERSION_SLUG="$(basename "${{ inputs.config_file }}" .json | tr '._' '-')"
           KVERS="$(jq -r '[.include[].kernel_version] | unique | join(" ")' <<< '${{ needs.generate-matrix.outputs.matrix }}')"
           jq -r '[.include[] | .kernel_version + " " + (.android_version | sub("^android"; ""))] | unique | .[]' \
             <<< '${{ needs.generate-matrix.outputs.matrix }}' > "${RUNNER_TEMP}/stock-pairs.txt"
@@ -333,6 +337,8 @@ jobs:
       sublevel: ${{ matrix.sublevel }}
       os_patch_level: ${{ matrix.os_patch_level }}
       variant: ${{ matrix.variant }}
+      kernel_source: ${{ matrix.kernel_source }}
+      kernel_ref: ${{ matrix.kernel_ref }}
       feature_set: ${{ inputs.feature_set }}
       ksu_branch: ${{ inputs.ksu_branch }}
       susfs_commit: ${{ inputs.susfs_commit }}

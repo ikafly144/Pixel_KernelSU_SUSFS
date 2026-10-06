@@ -24,6 +24,14 @@ on:
       variant:
         required: false
         type: string
+      kernel_source:
+        required: false
+        type: string
+        default: ""
+      kernel_ref:
+        required: false
+        type: string
+        default: ""
       feature_set:
         required: true
         type: string
@@ -172,6 +180,9 @@ jobs:
         android_version: ${{ inputs.android_version }}
         kernel_version: ${{ inputs.kernel_version }}
         os_patch_level: ${{ inputs.os_patch_level }}
+        sublevel: ${{ inputs.sublevel }}
+        kernel_source: ${{ inputs.kernel_source }}
+        kernel_ref: ${{ inputs.kernel_ref }}
 
     - name: Spoof /proc/config.gz With Stock Config
       uses: ./.github/actions/stock-config
