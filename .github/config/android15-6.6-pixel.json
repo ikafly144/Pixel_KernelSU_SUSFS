@@ -6,9 +6,33 @@
   },
   "include": [
     {
+      "sublevel": "98",
+      "date": "2025-09"
+    },
+    {
+      "sublevel": "102",
+      "date": "2025-10"
+    },
+    {
+      "sublevel": "118",
+      "date": "2026-01"
+    },
+    {
+      "sublevel": "127",
+      "date": "2026-04"
+    },
+    {
+      "sublevel": "139",
+      "date": "2026-07"
+    },
+    {
       "sublevel": "138",
       "date": "2026-09",
       "ref": "master"
+    },
+    {
+      "sublevel": "143",
+      "date": "2026-10"
     }
   ]
 }
