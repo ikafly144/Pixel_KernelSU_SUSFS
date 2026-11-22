@@ -152,6 +152,8 @@ lines.append("## SUSFS commits")
 lines.append("")
 all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
 def kbv_to_variant(kbv):
+    if "-pixel" in kbv:
+        kbv = kbv.replace("-pixel", "")
     if ".x-android" in kbv:
         kv, av = kbv.split(".x-android", 1)
         v = f"android{av}-{kv}"

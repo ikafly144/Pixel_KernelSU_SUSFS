@@ -1,0 +1,14 @@
+{
+  "version": "android16-6.12",
+  "source": {
+    "type": "pixel",
+    "url": "https://gitlab.com/sabafly/kernel_pixel_6.12.git"
+  },
+  "include": [
+    {
+      "sublevel": "90",
+      "date": "2026-11",
+      "ref": "master"
+    }
+  ]
+}
